@@ -173,6 +173,50 @@ public class UserController {
         }
     }
 
+    @RequestMapping(path = "/login/vk", method = RequestMethod.POST, produces = "application/json")
+    public ResponseEntity<?> loginUserVk(@RequestBody Token token, HttpSession httpSession) {
+        System.out.println("login");
+        System.out.println(token.getToken());
+        try{
+            URL url = new URL("https://api.vk.com/method/account.getProfileInfo&access_token=" + token.getToken() + "&v=5.92");
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            System.out.println(url);
+            con.setRequestMethod("GET");
+//            con.setRequestProperty("Content-Type", "application/json");
+            Integer status = con.getResponseCode();
+            if (status == 200) {
+                BufferedReader in = new BufferedReader(
+                        new InputStreamReader(con.getInputStream()));
+                String inputLine;
+                StringBuffer content = new StringBuffer();
+                while ((inputLine = in.readLine()) != null) {
+                    content.append(inputLine);
+                }
+                in.close();
+                Gson g = new Gson();
+                System.out.println(content.toString());
+                UserVk user = g.fromJson(content.toString(), UserVk.class);
+                System.out.println(user.getEmail());
+                user.setToken(token.getToken());
+                DAOResponse<User> daoResponse = userDAO.createUser(user);
+                if (daoResponse.status == HttpStatus.CONFLICT) {
+                    DAOResponse<Integer> daoResponse1 = userDAO.getUserID(user.getEmail());
+                    user.setId(BigDecimal.valueOf(daoResponse1.body));
+                    httpSession.setAttribute(SESSION_KEY, user);
+                    return ResponseEntity.status(HttpStatus.OK).body(new Message("Successfully authorized"));
+                }
+                user.setId(daoResponse.body.getId());
+                httpSession.setAttribute(SESSION_KEY, user);
+                return ResponseEntity.status(HttpStatus.CREATED).body(new Message("Successfully registered"));
+            }
+            con.disconnect();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Message("Try another service to login 1"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Message("Try another service to login 2"));
+        }
+    }
+
     @RequestMapping(path = "/setdevice", method = RequestMethod.POST, produces = "application/json")
     public ResponseEntity<?> setDevice(@RequestBody Token token, HttpSession httpSession) {
         final User user = (User) httpSession.getAttribute(SESSION_KEY);
@@ -229,8 +273,8 @@ public class UserController {
                 "\"notification\": {" +
                 "\"title\":" + title +
                 "\"body\":" + message +
-                "\"icon\": \"https://velox-app.herokuapp.com/icons/favicon.jpg\"," +
-                "\"click_action\": \"https://velox-app.herokuapp.com/\" }," +
+                "\"icon\": \"https://velox-qr.herokuapp.com/icons/favicon.jpg\"," +
+                "\"click_action\": \"https://velox-qr.herokuapp.com/\" }," +
                 "\"registration_ids\":" + "[" + devices + "]" +
                 "}";
 
@@ -280,14 +324,4 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Message("Unsuccessful logout"));
     }
 
-    ///////////////////////////////////////////
-    @RequestMapping(path = "/dropdb", method = RequestMethod.GET, produces = "application/json")
-    public ResponseEntity<?> clearTables(HttpSession httpSession) {
-        ResponseEntity response;
-        pageDAO.dropTables();
-        response = ResponseEntity.status(HttpStatus.OK).body("Successful droped");
-        return response;
-
-    }
-    //////////////////////////////////////////
 }

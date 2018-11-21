@@ -155,7 +155,7 @@ public class PageDAO {
                     new Object[]{}, Integer.class);
 
             Integer pages = template.queryForObject(
-                    "SELECT COUNT(*) FROM page;",
+                    "SELECT COUNT(*) FROM page WHERE standalone = TRUE;",
                     new Object[]{}, Integer.class);
 
 

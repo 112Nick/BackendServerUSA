@@ -62,7 +62,6 @@ public class PageController {
     @RequestMapping(path = "/container/create", method = RequestMethod.POST, produces = "application/json")
     public ResponseEntity<?> createPageContainer(@RequestBody PageContainer body, HttpSession httpSession) {
         User user = (User) httpSession.getAttribute(SESSION_KEY);
-        System.out.println("IN CONTAINER CREATE");
 
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new Message("UserYa isn't authorized"));
